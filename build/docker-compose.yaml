@@ -1,0 +1,14 @@
+version: "3"
+
+services:
+  db:
+      image: mysql:8.0
+      container_name: goProjectDB
+      restart: always
+      environment:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: database
+      ports:
+          - "3306:3306"
+      volumes:
+          - ./mysql/init:/docker-entrypoint-initdb.d
