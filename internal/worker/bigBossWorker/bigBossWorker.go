@@ -40,3 +40,21 @@ func StartWorker(wg *sync.WaitGroup, resultChannel chan model.Log, file []string
 
 	resultChannel <- log
 }
+
+func GetWorkerFile(file *[]string, numWorkers int, workerNumber int) []string {
+	totalLines := len(*file)
+	linesPerWorker := totalLines / numWorkers
+
+	startingLine := workerNumber * linesPerWorker
+	var endingLine int
+
+	if workerNumber == numWorkers-1 {
+		endingLine = totalLines
+	} else {
+		endingLine = (workerNumber + 1) * linesPerWorker
+	}
+
+	ans := (*file)[startingLine:endingLine]
+
+	return ans
+}
