@@ -55,10 +55,12 @@ func (r *Router) PostWorkersHandler(req *restful.Request, resp *restful.Response
 
 func (r *Router) startProcessingOnPostHandler(numWorkers int) {
 	resultChannel := make(chan model.Log)
+	inputChannel := make(chan *worker.InputData)
 	wg := new(sync.WaitGroup)
 
 	logger.Printf("Started processing with %d workers", numWorkers)
 
+	// read file
 	content, err := os.ReadFile("test/input")
 	if err != nil {
 		logger.Error("Error reading file: ", err)
@@ -66,22 +68,29 @@ func (r *Router) startProcessingOnPostHandler(numWorkers int) {
 	}
 	file := strings.Split(string(content), "\n")
 
+	// launch workers
 	wg.Add(numWorkers)
-
 	for i := 0; i < numWorkers; i++ {
-		workerInputData := worker.InputData{
-			WorkerNumber: i,
-			NumWorkers:   numWorkers,
-			InputFile:    &file,
-		}
-		
-		if rand.Int()%2 == 0 {
-			workerInputData.MathFunc = math.Min
-		} else {
-			workerInputData.MathFunc = math.Max
-		}
+		go r.Worker.StartWorker(wg, inputChannel, resultChannel)
+	}
 
-		go worker.StartWorker(wg, resultChannel, &workerInputData)
+	// send data to workers
+	for i := 0; i < numWorkers; i++ {
+		if rand.Int()%2 == 0 {
+			inputChannel <- &worker.InputData{
+				WorkerNumber: i,
+				NumWorkers:   numWorkers,
+				InputFile:    &file,
+				MathFunc:     math.Min,
+			}
+		} else {
+			inputChannel <- &worker.InputData{
+				WorkerNumber: i,
+				NumWorkers:   numWorkers,
+				InputFile:    &file,
+				MathFunc:     math.Max,
+			}
+		}
 	}
 
 	//memory.FlushDB(r.db)

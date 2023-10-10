@@ -2,16 +2,27 @@ package worker
 
 import (
 	"Main/internal/model"
+	logger "github.com/sirupsen/logrus"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
 
-func StartWorker(wg *sync.WaitGroup, resultChannel chan model.Log, data *InputData) {
+type W interface {
+	StartWorker(wg *sync.WaitGroup, inputChannel chan *InputData, resultChannel chan model.Log)
+}
+
+type Worker struct{}
+
+func (w *Worker) StartWorker(wg *sync.WaitGroup, inputChannel chan *InputData, resultChannel chan model.Log) {
 	defer wg.Done()
 	var res []string
-	file := GetWorkerFile(data.InputFile, data.NumWorkers, data.WorkerNumber)
+	inputData := <-inputChannel
+
+	logger.Print("Started worker " + strconv.Itoa(inputData.WorkerNumber))
+
+	file := getWorkerFile(inputData.InputFile, inputData.NumWorkers, inputData.WorkerNumber)
 
 	for _, line := range file {
 		a, err := strconv.Atoi(strings.Split(line, " ")[0])
@@ -29,7 +40,7 @@ func StartWorker(wg *sync.WaitGroup, resultChannel chan model.Log, data *InputDa
 			return
 		}
 
-		res = append(res, strconv.FormatFloat(data.MathFunc(float64(a), float64(b)), 'f', 1, 64))
+		res = append(res, strconv.FormatFloat(inputData.MathFunc(float64(a), float64(b)), 'f', 1, 64))
 	}
 
 	ans := strings.Join(res, ", ")
@@ -42,7 +53,7 @@ func StartWorker(wg *sync.WaitGroup, resultChannel chan model.Log, data *InputDa
 	resultChannel <- log
 }
 
-func GetWorkerFile(file *[]string, numWorkers int, workerNumber int) []string {
+func getWorkerFile(file *[]string, numWorkers int, workerNumber int) []string {
 	totalLines := len(*file)
 	linesPerWorker := totalLines / numWorkers
 

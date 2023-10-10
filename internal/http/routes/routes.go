@@ -1,16 +1,18 @@
 package routes
 
 import (
+	"Main/internal/worker"
 	"database/sql"
 	"github.com/emicklei/go-restful"
 )
 
 type Router struct {
-	db *sql.DB
+	db     *sql.DB
+	Worker worker.W
 }
 
 func NewRouter(db *sql.DB) *Router {
-	return &Router{db: db}
+	return &Router{db: db, Worker: &worker.Worker{}}
 }
 
 func (r *Router) RegisterRoutes(ws *restful.WebService) {
