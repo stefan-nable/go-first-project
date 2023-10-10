@@ -1,7 +1,7 @@
 package service
 
 import (
-	"Main/internal/http/memory"
+	"Main/internal/db"
 	"Main/internal/http/routes"
 	"database/sql"
 	runtime "github.com/banzaicloud/logrus-runtime-formatter"
@@ -20,12 +20,12 @@ func NewService() *Service {
 	return &Service{}
 }
 
-func cleanup(db *sql.DB) {
+func cleanup(dbRef *sql.DB) {
 	logger.Printf("Shutting down gracefully and doing cleanup... (flushing database)")
 
-	if db != nil {
-		memory.FlushDB(db)
-		err := db.Close()
+	if dbRef != nil {
+		db.FlushDB(dbRef)
+		err := dbRef.Close()
 		if err != nil {
 			return
 		}
@@ -37,12 +37,12 @@ func gracefulShutdown(dbChannel chan *sql.DB) {
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func(dbChannel chan *sql.DB) {
-		var db *sql.DB
+		var dbRef *sql.DB
 		for i := 0; i < 10; i++ {
 			select {
 			case <-c:
-				cleanup(db)
-			case db = <-dbChannel:
+				cleanup(dbRef)
+			case dbRef = <-dbChannel:
 			}
 		}
 	}(dbChannel)
@@ -67,7 +67,7 @@ func (s *Service) StartWebService() {
 	ws := new(restful.WebService)
 	restful.Add(ws)
 
-	storage := memory.ConnectToDB()
+	storage := db.ConnectToDB()
 	dbChannel <- storage
 
 	apiManager := routes.NewRouter(storage)

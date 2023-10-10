@@ -1,4 +1,4 @@
-package memory
+package db
 
 import (
 	"database/sql"

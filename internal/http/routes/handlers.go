@@ -2,7 +2,7 @@ package routes
 
 import (
 	"Main/internal/model"
-	"Main/internal/worker/bigBossWorker"
+	"Main/internal/worker"
 	"encoding/json"
 	"github.com/emicklei/go-restful"
 	logger "github.com/sirupsen/logrus"
@@ -48,9 +48,9 @@ func (r *Router) PostWorkersHandler(req *restful.Request, resp *restful.Response
 		return
 	}
 
-	defer r.startProcessingOnPostHandler(numberOfWorkers.NumberOfWorkers)
-
 	resp.WriteAsJson("Processing started with " + strconv.Itoa(numberOfWorkers.NumberOfWorkers) + " workers.")
+
+	r.startProcessingOnPostHandler(numberOfWorkers.NumberOfWorkers)
 }
 
 func (r *Router) startProcessingOnPostHandler(numWorkers int) {
@@ -66,14 +66,22 @@ func (r *Router) startProcessingOnPostHandler(numWorkers int) {
 	}
 	file := strings.Split(string(content), "\n")
 
-	for i := 0; i < numWorkers; i++ {
-		wg.Add(1)
+	wg.Add(numWorkers)
 
-		if rand.Int()%2 == 0 {
-			go bigBossWorker.StartWorker(wg, resultChannel, bigBossWorker.GetWorkerFile(&file, numWorkers, i), math.Min)
-		} else {
-			go bigBossWorker.StartWorker(wg, resultChannel, bigBossWorker.GetWorkerFile(&file, numWorkers, i), math.Max)
+	for i := 0; i < numWorkers; i++ {
+		workerInputData := worker.InputData{
+			WorkerNumber: i,
+			NumWorkers:   numWorkers,
+			InputFile:    &file,
 		}
+		
+		if rand.Int()%2 == 0 {
+			workerInputData.MathFunc = math.Min
+		} else {
+			workerInputData.MathFunc = math.Max
+		}
+
+		go worker.StartWorker(wg, resultChannel, &workerInputData)
 	}
 
 	//memory.FlushDB(r.db)

@@ -1,4 +1,4 @@
-package bigBossWorker
+package worker
 
 import (
 	"Main/internal/model"
@@ -8,9 +8,10 @@ import (
 	"time"
 )
 
-func StartWorker(wg *sync.WaitGroup, resultChannel chan model.Log, file []string, mathFunc func(float64, float64) float64) {
+func StartWorker(wg *sync.WaitGroup, resultChannel chan model.Log, data *InputData) {
 	defer wg.Done()
 	var res []string
+	file := GetWorkerFile(data.InputFile, data.NumWorkers, data.WorkerNumber)
 
 	for _, line := range file {
 		a, err := strconv.Atoi(strings.Split(line, " ")[0])
@@ -28,7 +29,7 @@ func StartWorker(wg *sync.WaitGroup, resultChannel chan model.Log, file []string
 			return
 		}
 
-		res = append(res, strconv.FormatFloat(mathFunc(float64(a), float64(b)), 'f', 1, 64))
+		res = append(res, strconv.FormatFloat(data.MathFunc(float64(a), float64(b)), 'f', 1, 64))
 	}
 
 	ans := strings.Join(res, ", ")
